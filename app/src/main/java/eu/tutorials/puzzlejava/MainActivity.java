@@ -12,6 +12,7 @@ import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.DragEvent;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.ImageButton;
@@ -35,7 +36,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.imgcodecs.Imgcodecs;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener,View.OnDragListener {
      static {
          if(!OpenCVLoader.initDebug()){
              Log.d("ERROR","Unable to load OpenCV");
@@ -43,6 +44,82 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
              Log.d("SUCCES","OpenCV loaded");
          }
          //Log.d("INICIO_OPENCV","Inicio el Opencv");
+    }
+    public dataImageview actual_dataImageview_on_long_click;
+     public dataImageview actual_dataImageview_on_entered_drag;
+    class MyDragListener implements View.OnDragListener {
+
+
+        @Override
+        public boolean onDrag(View v, DragEvent event) {
+            int action = event.getAction();
+            switch (event.getAction()) {
+                case DragEvent.ACTION_DRAG_STARTED:
+                    // do nothing
+                    break;
+                case DragEvent.ACTION_DRAG_ENTERED:
+
+                    break;
+                case DragEvent.ACTION_DRAG_EXITED:
+
+                    break;
+                case DragEvent.ACTION_DROP:
+                    // Dropped, reassign View to ViewGroup
+
+                    break;
+                case DragEvent.ACTION_DRAG_ENDED:
+                    //Log.d("ACTION_DRAG_DROG2", "ACTION_DRAG_ENDED");
+                    dataImageview datac = (dataImageview)v.getTag();
+                    //Log.d("action_tag_imageview", datac.ImaAct);
+                default:
+                    break;
+            }
+            return true;
+        }
+    }
+    @Override
+    public boolean onDrag(View view, DragEvent dragEvent) {
+        //Log.d("ACTION_DRAG_DROG", String.valueOf(dragEvent.getAction()));
+         if(dragEvent.getAction() == DragEvent.ACTION_DRAG_STARTED){
+             //Log.d("ACTION_DRAG_DROG","ACTION_DRAG_STARTED");
+             return true;
+         }
+         else if(dragEvent.getAction() == DragEvent.ACTION_DRAG_ENTERED){
+             Log.d("ACTION_DRAG_DROG","ACTION_DRAG_ENTERED");
+
+             dataImageview datac = (dataImageview)view.getTag();
+             actual_dataImageview_on_entered_drag = datac;
+             //Log.d("action_tag_imageview", datac.ImaAct);
+             return true;
+         }
+         else if(dragEvent.getAction() == DragEvent.ACTION_DRAG_LOCATION) {
+             //Log.d("ACTION_DRAG_DROG", "ACTION_DRAG_LOCATION");
+             return true;
+         }else if(dragEvent.getAction() ==DragEvent.ACTION_DRAG_EXITED) {
+            //Log.d("ACTION_DRAG_DROG", "ACTION_DRAG_EXITED");
+            return true;
+         }
+         else if(dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED) {
+             //Log.d("ACTION_DRAG_DROG", "ACTION_DRAG_ENDED");
+             dataImageview datac = (dataImageview)view.getTag();
+             //Log.d("action_tag_imageview", datac.ImaAct);
+             if(datac.ImaCorr.equals(actual_dataImageview_on_entered_drag.ImaCorr)) {
+                 if (actual_dataImageview_on_long_click.ImaAct.equals(actual_dataImageview_on_entered_drag.ImaCorr)) {
+                     Log.d("ImaCorrect", actual_dataImageview_on_entered_drag.ImaCorr);
+                 }
+             }
+
+             return true;
+         }
+         else if( dragEvent.getAction() == DragEvent.ACTION_DROP) {
+             //Log.d("ACTION_DRAG_DROG", "ACTION_DROP");
+            return true;
+         }
+         else{
+             return false;
+         }
+
+
     }
 
     public class MyDragShadowBuilder extends View.DragShadowBuilder {
@@ -280,7 +357,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         new_image_container.setTag(data_ima);
 
                                         new_image_container.setOnLongClickListener(_this::onLongClick);
-
+                                        new_image_container.setOnDragListener(_this::onDrag);
+                                        //new_image_container.setOnDragListener(new MyDragListener());
                                         tableRow.addView(new_image_container);
                                         Log.d("Añadido ImageView","xx");
 
@@ -346,7 +424,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 FileOutputStream fos = new FileOutputStream(file_image_a);
                 fos.write(buffer);
                 fos.close();
-                cropImagesPuzzle(folder_image_im_cropped,file_image_a,16);
+                cropImagesPuzzle(folder_image_im_cropped,file_image_a,9);
 
             }catch(Exception e){
                 throw e;
@@ -451,12 +529,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public boolean onLongClick (View v){
         Toast.makeText(MainActivity.this,"OnLongClick",Toast.LENGTH_LONG).show();
+        dataImageview datac = (dataImageview)v.getTag();
+        actual_dataImageview_on_long_click = datac;
+        Log.d("ONLONGCLICK",datac.ImaAct);
         dataImageview data_ima = (dataImageview) v.getTag();
         ClipData.Item item = new ClipData.Item(data_ima.ImaAct);
         String[] mimeTypes = {ClipDescription.MIMETYPE_TEXT_PLAIN};
         ClipData dataClip = new ClipData(data_ima.ImaAct,mimeTypes,item);
         MyDragShadowBuilder myShadow = new MyDragShadowBuilder(v);
-        //v.startDragAndDrop()
+        v.startDragAndDrop(dataClip,myShadow,null,0);
         return false;
     }
 
