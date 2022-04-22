@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.ClipData;
 import android.content.ClipDescription;
+import android.content.ClipboardManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -31,6 +32,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Random;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
@@ -47,7 +50,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     public dataImageview actual_dataImageview_on_long_click;
      public dataImageview actual_dataImageview_on_entered_drag;
-    class MyDragListener implements View.OnDragListener {
+
+     class MyDragListener implements View.OnDragListener {
 
 
         @Override
@@ -77,6 +81,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             return true;
         }
     }
+
+    private int checkPuzzleResolve(){
+        int ErrorDetect = 0;
+         for (int i = 0; i < AllImageViewPuzzle.size(); i++){
+            ImageView act = (ImageView) AllImageViewPuzzle.get(i);
+            dataImageview dt = (dataImageview) act.getTag();
+            if(dt.ImaAct.equals(dt.ImaCorr)){
+
+            }else{
+                ErrorDetect = 1;
+            }
+        }
+
+
+        return ErrorDetect;
+    }
     @Override
     public boolean onDrag(View view, DragEvent dragEvent) {
         //Log.d("ACTION_DRAG_DROG", String.valueOf(dragEvent.getAction()));
@@ -103,9 +123,52 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
              //Log.d("ACTION_DRAG_DROG", "ACTION_DRAG_ENDED");
              dataImageview datac = (dataImageview)view.getTag();
              //Log.d("action_tag_imageview", datac.ImaAct);
-             if(datac.ImaCorr.equals(actual_dataImageview_on_entered_drag.ImaCorr)) {
-                 if (actual_dataImageview_on_long_click.ImaAct.equals(actual_dataImageview_on_entered_drag.ImaCorr)) {
-                     Log.d("ImaCorrect", actual_dataImageview_on_entered_drag.ImaCorr);
+             if(actual_dataImageview_on_long_click != null && actual_dataImageview_on_entered_drag != null){
+                 if(datac.ImaAct.equals(actual_dataImageview_on_entered_drag.ImaAct)) {
+                     if (actual_dataImageview_on_long_click.ImaAct.equals(actual_dataImageview_on_entered_drag.ImaCorr)) {
+                         Log.d("ImaCorrect", actual_dataImageview_on_entered_drag.ImaCorr);
+                         String actual_dataImageview_on_entered_drag_ImaAct = String.format("%s", actual_dataImageview_on_entered_drag.ImaAct);
+                         String actual_dataImageview_on_long_click_ImaAct = String.format("%s", actual_dataImageview_on_long_click.ImaAct);
+
+                         actual_dataImageview_on_entered_drag.ImaAct = actual_dataImageview_on_long_click_ImaAct;
+                         actual_dataImageview_on_long_click.ImaAct = actual_dataImageview_on_entered_drag_ImaAct;
+
+                         Bitmap actual_dataImageview_on_entered_drag_Bitmap = Bitmap.createBitmap(actual_dataImageview_on_entered_drag.BitmapAct);
+                         Bitmap actual_dataImageview_on_long_click_Bitmap = Bitmap.createBitmap(actual_dataImageview_on_long_click.BitmapAct);
+
+                         //actual_dataImageview_on_long_click.imageView.setImageResource(0);
+                         //actual_dataImageview_on_entered_drag.imageView.setImageResource(0);
+                         actual_dataImageview_on_long_click.imageView.setImageBitmap(actual_dataImageview_on_entered_drag_Bitmap);
+                         actual_dataImageview_on_entered_drag.imageView.setImageBitmap(actual_dataImageview_on_entered_drag.BitmapCorr);
+
+                         actual_dataImageview_on_entered_drag.BitmapAct = Bitmap.createBitmap(actual_dataImageview_on_long_click_Bitmap);
+                         actual_dataImageview_on_long_click.BitmapAct = Bitmap.createBitmap(actual_dataImageview_on_entered_drag_Bitmap);
+
+                        actual_dataImageview_on_entered_drag = null;
+                        actual_dataImageview_on_long_click = null;
+
+                         //ClipboardManager mCbm = (ClipboardManager) getSystemService(getApplicationContext().CLIPBOARD_SERVICE);
+                         //mCbm.clearPrimaryClip();
+
+                         if(checkPuzzleResolve() == 0){
+                             Toast.makeText(MainActivity.this,"Puzzle Resuelto",Toast.LENGTH_LONG).show();
+
+                         }
+                         /*actual_dataImageview_on_long_click.ImaAct = actual_dataImageview_on_long_click.ImaCorr;
+                         actual_dataImageview_on_entered_drag.ImaAct = actual_dataImageview_on_entered_drag.ImaCorr;
+
+                         actual_dataImageview_on_long_click.imageView.setImageBitmap(actual_dataImageview_on_entered_drag.BitmapAct);
+                         actual_dataImageview_on_entered_drag.imageView.setImageBitmap(actual_dataImageview_on_entered_drag.BitmapCorr);
+
+                         //actual_dataImageview_on_long_click.BitmapAct = actual_dataImageview_on_entered_drag.BitmapAct;
+
+                         //actual_dataImageview_on_entered_drag.BitmapAct = actual_dataImageview_on_long_click.BitmapAct;
+
+                         if(checkPuzzleResolve() == 0){
+                             Toast.makeText(MainActivity.this,"Puzzle Resuelto",Toast.LENGTH_LONG).show();
+
+                         }*/
+                     }
                  }
              }
 
@@ -147,6 +210,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public class dataImageview{
          public String ImaAct;
          public String ImaCorr;
+         public Bitmap BitmapAct;
+         public Bitmap BitmapCorr;
+         public ImageView imageView;
          dataImageview(){
 
          }
@@ -164,6 +230,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private Thread threadTimeJava;
     private ThreadTimeObjectSync threadTimeObjectSync;
+
+    public ArrayList AllImageViewPuzzle;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
          File dir_to_clear = new File(getApplicationContext().getCacheDir().toString());
@@ -225,7 +293,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void starPuzzle() throws IOException {
         checkCroppedSaved();
 
-        createImageViewsPuzzle("2B.jpg");
+        createImageViewsPuzzle("Anime2.jpg");
     }
     private void createImageViewsPuzzle(String NameImage){
         File folder_cropped = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
@@ -315,8 +383,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 for (int i = 0; i < container_images.getChildCount(); i++) {
                                     container_images.removeViewAt(i);
                                 }
+                                ArrayList<String> list_images = new ArrayList();
+                                for(int row = 1; row <= numero_division; row++){
+                                    for(int column = 1; column <= numero_division; column++){
+                                        list_images.add(String.format("%s_%s.jpg",row,column));
+                                    }
+                                }
+
+                                ArrayList list_images_to_random = (ArrayList<String>) list_images.clone();
+                                ArrayList list_images_ram = new ArrayList<String>();
+
+                                while(list_images_to_random.size() > 0) {
+                                    int index = (int) (Math.random() * list_images_to_random.size());
+                                    list_images_ram.add(list_images_to_random.get(index));
+                                    list_images_to_random.remove(index);
 
 
+                                }
+                                int StepRandom = 0;
+                                AllImageViewPuzzle = new ArrayList<ImageView>();
                                 for(int row = 1; row <= numero_division; row++){
                                     TableRow tableRow = new TableRow(getApplicationContext());
                                     //tableRow.setLayoutParams(new TableLayout.LayoutParams(TableLayout.LayoutParams.WRAP_CONTENT, TableLayout.LayoutParams.WRAP_CONTENT));
@@ -334,14 +419,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     //tableRow.setWeightSum();
                                     container_images.addView(tableRow);
                                     //tableRow.setMinimumHeight(100);
+
+
+
                                     for(int column = 1; column <= numero_division; column++){
                                         ImageView new_image_container = new ImageView(getApplicationContext());
                                         //new_image_container.setBackgroundColor(Color.rgb(100, 100, 50));
-                                        Bitmap bmImg = BitmapFactory.decodeFile(String.format("%s/Images/%s/Cropped/%s_%s.jpg", getApplicationContext().getFilesDir().toString(), searchName,row,column));
+                                        Bitmap bmImg = BitmapFactory.decodeFile(String.format("%s/Images/%s/Cropped/%s", getApplicationContext().getFilesDir().toString(), searchName,list_images_ram.get(StepRandom)));
                                         int border = 2;
                                         Bitmap bmImgScale = Bitmap.createScaledBitmap(bmImg,(int)width_imageview - (border*2),(int)height_imageview - (border*2),false);
                                         new_image_container.setImageBitmap(bmImgScale);
 
+                                        Bitmap bmImgCorr = BitmapFactory.decodeFile(String.format("%s/Images/%s/Cropped/%s_%s.jpg", getApplicationContext().getFilesDir().toString(), searchName,row,column));
+                                        Bitmap bmImgCorrScale = Bitmap.createScaledBitmap(bmImgCorr,(int)width_imageview - (border*2),(int)height_imageview - (border*2),false);
                                         new_image_container.setPadding(2,2,2,2);
                                         //Arrays.asList(listCroppedImages).contains("1_2.jpg")
 
@@ -352,9 +442,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         new_image_container.setMaxHeight((int)height_imageview);
 
                                         dataImageview data_ima = new dataImageview();
-                                        data_ima.ImaAct = String.format("%s/Images/%s/Cropped/%s_%s.jpg", getApplicationContext().getFilesDir().toString(), searchName,row,column);
-                                        data_ima.ImaCorr = String.format("%s/Images/%s/Cropped/%s_%s.jpg", getApplicationContext().getFilesDir().toString(), searchName,row,column);
+                                        data_ima.ImaAct = String.format("%s", list_images_ram.get(StepRandom));
+                                        data_ima.ImaCorr = String.format("%s_%s.jpg", row,column);
+                                        data_ima.BitmapAct = bmImgScale;
+                                        data_ima.BitmapCorr = bmImgCorrScale;
+                                        data_ima.imageView = new_image_container;
                                         new_image_container.setTag(data_ima);
+                                        AllImageViewPuzzle.add(new_image_container);
+
+                                        StepRandom += 1;
 
                                         new_image_container.setOnLongClickListener(_this::onLongClick);
                                         new_image_container.setOnDragListener(_this::onDrag);
@@ -424,7 +520,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 FileOutputStream fos = new FileOutputStream(file_image_a);
                 fos.write(buffer);
                 fos.close();
-                cropImagesPuzzle(folder_image_im_cropped,file_image_a,9);
+                cropImagesPuzzle(folder_image_im_cropped,file_image_a,4);
 
             }catch(Exception e){
                 throw e;
@@ -528,7 +624,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     @Override
     public boolean onLongClick (View v){
-        Toast.makeText(MainActivity.this,"OnLongClick",Toast.LENGTH_LONG).show();
+        //Toast.makeText(MainActivity.this,"OnLongClick",Toast.LENGTH_LONG).show();
         dataImageview datac = (dataImageview)v.getTag();
         actual_dataImageview_on_long_click = datac;
         Log.d("ONLONGCLICK",datac.ImaAct);
@@ -538,6 +634,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ClipData dataClip = new ClipData(data_ima.ImaAct,mimeTypes,item);
         MyDragShadowBuilder myShadow = new MyDragShadowBuilder(v);
         v.startDragAndDrop(dataClip,myShadow,null,0);
+        //Log.i("PUZZLE_TERMINADO",String.valueOf(checkPuzzleResolve()));
         return false;
     }
 
