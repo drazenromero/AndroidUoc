@@ -5,6 +5,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ClipboardManager;
+import android.content.ContentValues;
+import android.content.Intent;
+import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -13,9 +16,11 @@ import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Handler;
 import android.util.Log;
+import android.view.ActionProvider;
 import android.view.DragEvent;
 import android.view.View;
 import android.webkit.WebView;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -32,12 +37,22 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Random;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Rect;
 import org.opencv.imgcodecs.Imgcodecs;
+import org.w3c.dom.Text;
+
+import entidades_helper.ConexionSQLiteHelper;
+import entidades_helper.Puntaje_Esquema;
+import entidades_helper.UsuarioEsquema;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener, View.OnLongClickListener,View.OnDragListener {
      static {
@@ -119,7 +134,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             //Log.d("ACTION_DRAG_DROG", "ACTION_DRAG_EXITED");
             return true;
          }
-         else if(dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED) {
+         else //Log.d("ACTION_DRAG_DROG", "ACTION_DROP");
+             if(dragEvent.getAction() == DragEvent.ACTION_DRAG_ENDED) {
              //Log.d("ACTION_DRAG_DROG", "ACTION_DRAG_ENDED");
              dataImageview datac = (dataImageview)view.getTag();
              //Log.d("action_tag_imageview", datac.ImaAct);
@@ -150,8 +166,113 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                          //ClipboardManager mCbm = (ClipboardManager) getSystemService(getApplicationContext().CLIPBOARD_SERVICE);
                          //mCbm.clearPrimaryClip();
 
-                         if(checkPuzzleResolve() == 0){
-                             Toast.makeText(MainActivity.this,"Puzzle Resuelto",Toast.LENGTH_LONG).show();
+                         if(checkPuzzleResolve() == 0) {
+                             Toast.makeText(MainActivity.this, String.format("Level: %d",IndexImageLevels + 2), Toast.LENGTH_LONG).show();
+
+
+                             if (IndexImageLevels <= ImageLevels.size() - 1){
+                                 //String firstKey = (String)ImageLevels.keySet().toArray()[IndexImageLevels];
+                                 //String valueForFirstKey = ImageLevels.get(firstKey);
+
+
+                                 try {
+
+                                     String firstKey = (String) ImageLevels.keySet().toArray()[IndexImageLevels];
+                                     Integer valueForFirstKey = ImageLevels.get(firstKey);
+
+                                     //File folder_image_im_cropped = new File(String.format("%s/Images/%s/Cropped",getApplicationContext().getFilesDir().toString(),firstKey.replace('.','-')));
+
+                                     //Aqui debo de guardar los puntos el menor tiempo vale mas
+
+                                     ContentValues values = new ContentValues();
+
+                                     Integer levelgame;
+                                     switch (valueForFirstKey){
+                                         case 4:
+                                             levelgame = 1;
+                                             break;
+                                         case 9:
+                                             levelgame = 2;
+                                             break;
+                                         case 16:
+                                             levelgame = 3;
+                                             break;
+                                         default:
+                                             levelgame = -1;
+                                             break;
+
+                                     }
+                                     values.put(Puntaje_Esquema.CAMPO_NIVEL, levelgame);
+                                     values.put(Puntaje_Esquema.CAMPO_PUNTAJE,threadTimeObjectSync.getSeconds());
+                                     values.put(Puntaje_Esquema.CAMPO_USER,NameUser);
+
+                                     /*String pattern = "MM-dd-yyyy";
+                                     SimpleDateFormat simpleDateFormat = new SimpleDateFormat(pattern);
+                                     Date date = simpleDateFormat.parse("12-01-2018");*/
+
+
+                                     SimpleDateFormat sdfDate = new SimpleDateFormat("MM-dd-yyyy HH:mm:ss");//dd/MM/yyyy
+                                     Date now = new Date();
+                                     String strDate = sdfDate.format(now);
+
+
+
+
+                                     //System.out.println(date);
+
+
+                                     values.put(Puntaje_Esquema.CAMPO_FECHA,strDate);
+
+                                     SQLiteDatabase db = conex.getWritableDatabase();
+                                     Long id_resultante = db.insert(Puntaje_Esquema.TABLA_PUNTAJE,UsuarioEsquema.CAMPO_ID,values);
+
+
+
+                                     //NameUser
+                                     if(IndexImageLevels == ImageLevels.size() - 1){
+                                         threadTimeObjectSync.setContinueTime(false);
+                                         threadTimeObjectSync.setSeconds(0);
+                                     }else{
+                                         threadTimeObjectSync.setSeconds(0);
+
+                                     }
+
+                                     IndexImageLevels += 1;
+                                     if (IndexImageLevels <= ImageLevels.size() - 1) {
+                                         String firstKey2 = (String) ImageLevels.keySet().toArray()[IndexImageLevels];
+                                         Integer valueForFirstKey2 = ImageLevels.get(firstKey2);
+                                         //checkCroppedSaved(firstKey, valueForFirstKey);
+                                         //cropImagesPuzzle(folder_image_im_cropped,file_image_a,16);
+                                         TableLayout game_container = (TableLayout) findViewById(R.id.TablePuzzleContainer);
+                                         game_container.removeViews(0, Math.max(0, game_container.getChildCount()));
+                                         game_container.post(new Runnable() {
+                                             @Override
+                                             public void run() {
+                                                 try {
+                                                     checkCroppedSaved(firstKey2, valueForFirstKey2);
+                                                     createImageViewsPuzzle(firstKey2);
+                                                 } catch (IOException e) {
+                                                     e.printStackTrace();
+                                                 }
+
+                                             }
+                                         });
+                                     }else{
+                                         Intent intent = new Intent(getApplicationContext(), finish_game.class);
+                                         intent.putExtra("NAME_USER",NameUser);
+                                         startActivity(intent);
+                                     }
+
+                                 } catch (Exception e) {
+                                     Log.e("error level", "fallo");
+                                     e.printStackTrace();
+                                     Toast.makeText(getApplicationContext(), "FALLO", Toast.LENGTH_LONG).show();
+                                 }
+
+                            }else{
+                                 Intent intent = new Intent(getApplicationContext(), finish_game.class);
+                                 startActivity(intent);
+                             }
 
                          }
                          /*actual_dataImageview_on_long_click.ImaAct = actual_dataImageview_on_long_click.ImaCorr;
@@ -174,13 +295,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
              return true;
          }
-         else if( dragEvent.getAction() == DragEvent.ACTION_DROP) {
-             //Log.d("ACTION_DRAG_DROG", "ACTION_DROP");
-            return true;
-         }
-         else{
-             return false;
-         }
+         else return dragEvent.getAction() == DragEvent.ACTION_DROP;
 
 
     }
@@ -227,11 +342,25 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private NavigationView NavigationOptions;
     private TableLayout GameLayout;
     private LinearLayout HelpLayout;
+    private Button ButtonBackToStart;
+
+    private ConexionSQLiteHelper conex;
 
     private Thread threadTimeJava;
     private ThreadTimeObjectSync threadTimeObjectSync;
 
+    public int IndexImageLevels = 0;
+
+    public LinkedHashMap<String, Integer> ImageLevels = new LinkedHashMap<String, Integer>() {{
+        put("2B.jpg",4);
+        put("Medusa.png",9);
+        put("Anime1.jpg",16);
+
+    }};
     public ArrayList AllImageViewPuzzle;
+
+    private String NameUser;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
          File dir_to_clear = new File(getApplicationContext().getCacheDir().toString());
@@ -243,7 +372,20 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         super.onCreate(savedInstanceState);
          setContentView(R.layout.activity_main);
 
-        try {
+         conex = new ConexionSQLiteHelper(this,"bd_usuarios",null,10);
+
+         NameUser = getIntent().getStringExtra("NAME_USER").toString();
+        TextView nameTextview = (TextView)findViewById(R.id.nameUser);
+        nameTextview.post(new Runnable() {
+             @Override
+             public void run() {
+                 nameTextview.setText(NameUser);
+             }
+         });
+
+
+
+         try {
             //checkCroppedSaved();
             starPuzzle();
         } catch (Exception e) {
@@ -264,6 +406,31 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         button_game = action_bar.findViewById(R.id.barGame);
         button_game.setOnClickListener(this);
 
+        ButtonBackToStart = (Button)findViewById(R.id.buttonBackToStart);
+        AppCompatActivity _this = this;
+
+         class MyButtonClicklistener implements View.OnClickListener
+        {
+            private AppCompatActivity reference;
+            @Override
+            public void onClick(View v)
+            {
+                //Do something on the button click
+                //Toast.makeText(reference.getApplicationContext(),"volver",Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(this.reference.getApplicationContext(), home_portal.class);
+
+                startActivity(intent);
+            }
+
+            public MyButtonClicklistener(AppCompatActivity r){
+                this.reference = r;
+            }
+
+
+        }
+        MyButtonClicklistener ll = new MyButtonClicklistener(this);
+        ButtonBackToStart.setOnClickListener(ll);
+
         web_view_help = findViewById(R.id.WebViewHelp);
         web_view_help.loadUrl("file:///android_asset/help/help_page/index.html");
         GameLayout = (TableLayout) findViewById(R.id.GameLayout);
@@ -275,7 +442,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         threadTimeJava.start();
 
      }
-    private void cleanDir(File dir){
+
+     private void backToStart(){
+
+     }
+
+     private void cleanDir(File dir){
          float bytesDeleted = 0;
          File[] files = dir.listFiles();
          for(File file: files){
@@ -291,24 +463,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         fileOrDirectory.delete();
     }
     private void starPuzzle() throws IOException {
-        checkCroppedSaved();
+        String firstKey = (String)ImageLevels.keySet().toArray()[IndexImageLevels];
+        Integer valueForFirstKey =  ImageLevels.get(firstKey);
+        checkCroppedSaved(firstKey,valueForFirstKey);
 
-        createImageViewsPuzzle("Anime2.jpg");
+        createImageViewsPuzzle(firstKey);
     }
     private void createImageViewsPuzzle(String NameImage){
         File folder_cropped = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
-        if(!folder_cropped.exists()){
+        /*if(!folder_cropped.exists()){
             try {
                 checkCroppedSaved();
             }
             catch(Exception e){
 
             }
-        }
+        }*/
         String searchName = NameImage.replace('.','-');
         for(String ImageN: folder_cropped.list()){
             if(searchName.equals(ImageN)){
-                Toast.makeText(MainActivity.this,String.format("Encontrada Imagen %s",searchName),Toast.LENGTH_LONG).show();
+                //Toast.makeText(MainActivity.this,String.format("Encontrada Imagen %s",searchName),Toast.LENGTH_LONG).show();
                 File folder_copped_images = new File(String.format("%s/Images/%s/Cropped", getApplicationContext().getFilesDir().toString(),searchName));
                 String[] listCroppedImages = folder_copped_images.list();
                 if(listCroppedImages.length > 0){
@@ -380,9 +554,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 float height_ratio = (float)(numero_division * height) * min_scale;
                                 float width_imageview = (width_ratio /numero_division);
                                 float height_imageview = (height_ratio/numero_division);*/
-                                for (int i = 0; i < container_images.getChildCount(); i++) {
+                                /*for (int i = 0; i < container_images.getChildCount(); i++) {
                                     container_images.removeViewAt(i);
-                                }
+                                }*/
+                                container_images.removeViews(0, Math.max(0, container_images.getChildCount() ));
                                 ArrayList<String> list_images = new ArrayList();
                                 for(int row = 1; row <= numero_division; row++){
                                     for(int column = 1; column <= numero_division; column++){
@@ -390,8 +565,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     }
                                 }
 
-                                ArrayList list_images_to_random = (ArrayList<String>) list_images.clone();
+                                /*ArrayList list_images_to_random = (ArrayList<String>) list_images.clone();
                                 ArrayList list_images_ram = new ArrayList<String>();
+
+
 
                                 while(list_images_to_random.size() > 0) {
                                     int index = (int) (Math.random() * list_images_to_random.size());
@@ -399,7 +576,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                     list_images_to_random.remove(index);
 
 
-                                }
+                                }*/
+                                ArrayList<String> list_images_ram = shuffleArrayList(list_images);
                                 int StepRandom = 0;
                                 AllImageViewPuzzle = new ArrayList<ImageView>();
                                 for(int row = 1; row <= numero_division; row++){
@@ -461,8 +639,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                         //tableRow
                                     }
 
-                                    TextView txt =(TextView)findViewById(R.id.TimeCounter);
-                                    txt.setText("xxxxxx");
+                                    //TextView txt =(TextView)findViewById(R.id.TimeCounter);
+                                    //txt.setText("xxxxxx");
 
                                 }
 
@@ -482,6 +660,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         }
     }
+    public ArrayList shuffleArrayList(ArrayList list_images){
+        ArrayList list_images_to_random = (ArrayList<String>) list_images.clone();
+        ArrayList list_images_ram = new ArrayList<String>();
+
+
+        do{
+            while(list_images_to_random.size() > 0) {
+                int index = (int) (Math.random() * list_images_to_random.size());
+                list_images_ram.add(list_images_to_random.get(index));
+                list_images_to_random.remove(index);
+
+
+            }
+        }while(list_images_ram.equals(list_images));
+
+
+
+        return list_images_ram;
+    }
+
     private void checkCroppedSaved() throws IOException {
 
         File file_x = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
@@ -528,6 +726,55 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         }
+
+    }
+    private void checkCroppedSaved(String NameImage,Integer NumberDivision) throws IOException {
+
+        File file_x = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
+        if (file_x.exists()) {
+            //deleteRecursive(file_x);
+        } else {
+            file_x.mkdirs();
+            Log.d("FOLDER", "Folder Created");
+        }
+        String[] ListFolderImages;
+        ListFolderImages = getApplicationContext().getAssets().list("ImagesPuzzle");
+        try{
+            File folder_image_im = new File(String.format("%s/Images/%s",getApplicationContext().getFilesDir().toString(),NameImage.replace('.','-')));
+            File folder_image_im_cropped;
+            if(!folder_image_im.exists()){
+                folder_image_im.mkdirs();
+                folder_image_im_cropped = new File(String.format("%s/Images/%s/Cropped",getApplicationContext().getFilesDir().toString(),NameImage.replace('.','-')));
+                folder_image_im_cropped.mkdirs();
+
+            }
+            else{
+                deleteRecursive(folder_image_im);
+                folder_image_im.mkdirs();
+                folder_image_im_cropped = new File(String.format("%s/Images/%s/Cropped",getApplicationContext().getFilesDir().toString(),NameImage.replace('.','-')));
+                if(!folder_image_im_cropped.exists()){
+                    folder_image_im_cropped.mkdirs();
+                }
+            }
+            File file_image_a = new File(String.format("%s/tmpImage",getApplicationContext().getCacheDir().toString()));
+            file_image_a.createNewFile();
+            InputStream is = getApplicationContext().getAssets().open(String.format("ImagesPuzzle/%s",NameImage));
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            FileOutputStream fos = new FileOutputStream(file_image_a);
+            fos.write(buffer);
+            fos.close();
+            cropImagesPuzzle(folder_image_im_cropped,file_image_a,NumberDivision);
+
+        }catch(Exception e){
+            throw e;
+        }
+
+
+
+
 
     }
     private File readFileForOpencv(String PathImage) throws IOException {

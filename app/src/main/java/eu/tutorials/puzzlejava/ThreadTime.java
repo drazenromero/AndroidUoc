@@ -21,15 +21,23 @@ public class ThreadTime extends Thread{
             while(true) {
                 Thread.sleep(1000);
                 synchronized (threadTimeObjectSync){
-                    threadTimeObjectSync.setSeconds(threadTimeObjectSync.getSeconds() + 1);
-                    //System.out.println(String.format("Has passed %d",threadTimeObjectSync.getSeconds()));
-                    parentActivity.runOnUiThread(new Runnable() {
-                        @Override
-                        public void run() {
-                            TextView txt = parentActivity.findViewById(R.id.TimeCounter);
-                            txt.setText(String.format("Time: %dS",threadTimeObjectSync.getSeconds()));
-                        }
-                    });
+                    if(threadTimeObjectSync.getContinueTime() == true) {
+
+                        threadTimeObjectSync.setSeconds(threadTimeObjectSync.getSeconds() + 1);
+                        //System.out.println(String.format("Has passed %d",threadTimeObjectSync.getSeconds()));
+                        parentActivity.runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                TextView txt = parentActivity.findViewById(R.id.TimeCounter);
+                                txt.setText(String.format("Time: %dS", threadTimeObjectSync.getSeconds()));
+                            }
+                        });
+                    }else{
+
+                    }
+
+
+
                 }
 
 

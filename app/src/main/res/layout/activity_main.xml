@@ -26,11 +26,11 @@
                 android:orientation="vertical"
                 tools:visibility="visible">
 
-                <TextView
-                    android:id="@+id/textView2"
+                <Button
+                    android:id="@+id/buttonBackToStart"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Opciones" />
+                    android:text="Button" />
             </LinearLayout>
 
         </com.google.android.material.navigation.NavigationView>
@@ -68,6 +68,14 @@
                     android:layout_weight="1"
                     android:gravity="right"
                     android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/nameUser"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="NameUser"
+                        android:textSize="25dp" />
 
                     <TextView
                         android:id="@+id/TimeCounter"
