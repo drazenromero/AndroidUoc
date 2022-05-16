@@ -7,10 +7,12 @@
     tools:context=".MainActivity"
     android:orientation="vertical">
     <include layout="@layout/appbar" android:id="@+id/appbarinclude"/>
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:visibility="visible">
 
         <com.google.android.material.navigation.NavigationView
             android:id="@+id/NavigationOptions"
@@ -30,7 +32,32 @@
                     android:id="@+id/buttonBackToStart"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Button" />
+                    android:text="Volver" />
+
+                <Button
+                    android:id="@+id/Select_Images"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Pick Images" />
+
+                <Button
+                    android:id="@+id/buttonTakePhoto"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Tomar Fotografia" />
+
+                <Button
+                    android:id="@+id/buttonInternalImages"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Imagenes Internas" />
+
+                <Switch
+                    android:id="@+id/switchSoundPool"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    android:text="Sonido" />
             </LinearLayout>
 
         </com.google.android.material.navigation.NavigationView>

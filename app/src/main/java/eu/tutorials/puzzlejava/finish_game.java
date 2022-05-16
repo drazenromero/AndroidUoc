@@ -8,10 +8,12 @@ import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
+import android.provider.CalendarContract;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import entidades_helper.ConexionSQLiteHelper;
 
@@ -19,6 +21,11 @@ public class finish_game extends AppCompatActivity {
 
     private Button buttonBack;
     private String NameUser;
+
+    private int TL1 = 0;
+    private int TL2 = 0;
+    private int TL3 = 0;
+
 
     @SuppressLint("Range")
     @Override
@@ -64,6 +71,7 @@ public class finish_game extends AppCompatActivity {
             while (c.moveToNext()) {
                 ((TextView)findViewById(R.id.TitleLevel1)).setText(String.valueOf(c.getInt(c.getColumnIndex("nivel"))));
                 ((TextView)findViewById(R.id.TitleTime1)).setText(String.valueOf( c.getFloat(c.getColumnIndex("puntaje"))));
+                TL1 =(int) c.getFloat(c.getColumnIndex("puntaje"));
                 ((TextView)findViewById(R.id.TitleFecha1)).setText(String.valueOf( c.getString(c.getColumnIndex("fecha"))));
 
                 /*c.getString(c.getColumnIndex("user"));
@@ -82,6 +90,8 @@ public class finish_game extends AppCompatActivity {
             while (c.moveToNext()) {
                 ((TextView)findViewById(R.id.TitleLevel2)).setText(String.valueOf(c.getInt(c.getColumnIndex("nivel"))));
                 ((TextView)findViewById(R.id.TitleTime2)).setText(String.valueOf( c.getFloat(c.getColumnIndex("puntaje"))));
+                TL2 =(int) c.getFloat(c.getColumnIndex("puntaje"));
+
                 ((TextView)findViewById(R.id.TitleFecha2)).setText(String.valueOf( c.getString(c.getColumnIndex("fecha"))));
 
                 /*c.getString(c.getColumnIndex("user"));
@@ -100,6 +110,7 @@ public class finish_game extends AppCompatActivity {
             while (c.moveToNext()) {
                 ((TextView)findViewById(R.id.TitleLevel3)).setText(String.valueOf(c.getInt(c.getColumnIndex("nivel"))));
                 ((TextView)findViewById(R.id.TitleTime3)).setText(String.valueOf( c.getFloat(c.getColumnIndex("puntaje"))));
+                TL3 =(int) c.getFloat(c.getColumnIndex("puntaje"));
                 ((TextView)findViewById(R.id.TitleFecha3)).setText(String.valueOf( c.getString(c.getColumnIndex("fecha"))));
 
                 /*c.getString(c.getColumnIndex("user"));
@@ -111,6 +122,25 @@ public class finish_game extends AppCompatActivity {
             c.close();
         }
 
+            if( TL1 < Integer.parseInt(getIntent().getStringExtra("LevelTime1"))  ||
+                  TL2 < Integer.parseInt(getIntent().getStringExtra("LevelTime2")) ||
+                    TL3 < Integer.parseInt(getIntent().getStringExtra("LevelTime3") ) ){
+                ((TextView)findViewById(R.id.textViewNewRecord)).setText("NUEVO RECORD");
+                Toast.makeText(getApplicationContext(),"NUEVO RECORD",Toast.LENGTH_LONG).show();
+
+            }
+            else{
+                ((TextView)findViewById(R.id.textViewNewRecord)).setText("");
+            }
+
+        try{
+            Integer.parseInt(getIntent().getStringExtra("LevelTime1"));
+            Integer.parseInt(getIntent().getStringExtra("LevelTime2"));
+            Integer.parseInt(getIntent().getStringExtra("LevelTime3"));
+        testCalendar(Integer.parseInt(getIntent().getStringExtra("LevelTime1")),Integer.parseInt(getIntent().getStringExtra("LevelTime2")),Integer.parseInt(getIntent().getStringExtra("LevelTime3")));
+      }catch(Exception e){
+            Log.d("calendar","problem");
+        }
 //        String parametros[] = {"1"};
 //        String campos[] = {UsuarioEsquema.CAMPO_USER, Puntaje_Esquema.CAMPO_FECHA};
 //        //Cursor cursor = db.query(UsuarioEsquema.TABLA_USUARIO,);
@@ -137,5 +167,19 @@ public class finish_game extends AppCompatActivity {
 
 
 
+    }
+    private void testCalendar(int time1,int time2, int time3){
+        Intent intent = new Intent(Intent.ACTION_INSERT);
+        intent.setData(CalendarContract.Events.CONTENT_URI);
+        intent.putExtra(CalendarContract.Events.TITLE,"Puntuación Puzzle");
+        intent.putExtra(CalendarContract.Events.DESCRIPTION,String.format("level1: %s ; level2: %s ; level3: %s",time1,time2,time3));
+        intent.putExtra(CalendarContract.Events.ALL_DAY,false);
+        intent.putExtra(CalendarContract.Events.EVENT_LOCATION,"Worlwide");
+        if(intent.resolveActivity(getPackageManager()) != null){
+            startActivity(intent);
+        }else{
+            Log.d("Calendar","not suported");
+            startActivity(intent);
+        }
     }
 }

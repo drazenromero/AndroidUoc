@@ -1,26 +1,44 @@
 package eu.tutorials.puzzlejava;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipDescription;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.media.AudioManager;
+import android.media.SoundPool;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Debug;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.CalendarContract;
+import android.provider.ContactsContract;
+import android.provider.MediaStore;
 import android.util.Log;
 import android.view.ActionProvider;
 import android.view.DragEvent;
 import android.view.View;
 import android.webkit.WebView;
 import android.widget.Button;
+import android.widget.CompoundButton;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -34,14 +52,17 @@ import com.google.android.material.navigation.NavigationView;
 import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
@@ -50,6 +71,7 @@ import org.opencv.core.Rect;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.w3c.dom.Text;
 
+import Utilidades.FileUtils;
 import entidades_helper.ConexionSQLiteHelper;
 import entidades_helper.Puntaje_Esquema;
 import entidades_helper.UsuarioEsquema;
@@ -165,7 +187,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                          //ClipboardManager mCbm = (ClipboardManager) getSystemService(getApplicationContext().CLIPBOARD_SERVICE);
                          //mCbm.clearPrimaryClip();
-
+                         if(enableSound) {
+                             soundPool.play(soundDrap, 1.0f, 1.0f, 1, 0, 1.0f);
+                         }
                          if(checkPuzzleResolve() == 0) {
                              Toast.makeText(MainActivity.this, String.format("Level: %d",IndexImageLevels + 2), Toast.LENGTH_LONG).show();
 
@@ -187,14 +211,14 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                      ContentValues values = new ContentValues();
 
                                      Integer levelgame;
-                                     switch (valueForFirstKey){
-                                         case 4:
+                                     switch (IndexImageLevels){
+                                         case 0:
                                              levelgame = 1;
                                              break;
-                                         case 9:
+                                         case 1:
                                              levelgame = 2;
                                              break;
-                                         case 16:
+                                         case 2:
                                              levelgame = 3;
                                              break;
                                          default:
@@ -202,6 +226,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                              break;
 
                                      }
+                                     /*if(levelgame == 1){
+                                         LevelTime1 = threadTimeObjectSync.getSeconds();
+                                     }else if(levelgame == 2){
+                                         LevelTime2 = threadTimeObjectSync.getSeconds();
+                                     }else if(levelgame == 3){
+                                         LevelTime3 = threadTimeObjectSync.getSeconds();
+                                     }*/
                                      values.put(Puntaje_Esquema.CAMPO_NIVEL, levelgame);
                                      values.put(Puntaje_Esquema.CAMPO_PUNTAJE,threadTimeObjectSync.getSeconds());
                                      values.put(Puntaje_Esquema.CAMPO_USER,NameUser);
@@ -249,8 +280,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                              @Override
                                              public void run() {
                                                  try {
-                                                     checkCroppedSaved(firstKey2, valueForFirstKey2);
-                                                     createImageViewsPuzzle(firstKey2);
+                                                     checkCroppedSaved(firstKey2, valueForFirstKey2,SourceImageCrop,"");
+                                                     createImageViewsPuzzle(firstKey2,SourceImageCrop);
                                                  } catch (IOException e) {
                                                      e.printStackTrace();
                                                  }
@@ -258,8 +289,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                              }
                                          });
                                      }else{
+                                         //testCalendar(LevelTime1,LevelTime2,LevelTime3);
+
                                          Intent intent = new Intent(getApplicationContext(), finish_game.class);
                                          intent.putExtra("NAME_USER",NameUser);
+                                         intent.putExtra("LevelTime1", String.valueOf(LevelTime1));
+                                         intent.putExtra("LevelTime2",String.valueOf(LevelTime2));
+                                         intent.putExtra("LevelTime3",String.valueOf(LevelTime3));
                                          startActivity(intent);
                                      }
 
@@ -343,8 +379,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private TableLayout GameLayout;
     private LinearLayout HelpLayout;
     private Button ButtonBackToStart;
+    private Button ButtonPickImages;
+    private Button ButtonToTakePhoto;
+    private Button ButtonUseInnerImages;
+    private ArrayList<Uri> ImagesUrisSelected = new ArrayList<>();
+    private static final int PICK_IMAGES_CODE = 0;
 
     private ConexionSQLiteHelper conex;
+
+    private SoundPool soundPool = new SoundPool(1, AudioManager.STREAM_MUSIC,0);
+    private int soundTap;
+    private int soundDrap;
+    private CompoundButton switchSound;
+    private boolean enableSound = true;
 
     private Thread threadTimeJava;
     private ThreadTimeObjectSync threadTimeObjectSync;
@@ -357,25 +404,46 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         put("Anime1.jpg",16);
 
     }};
+    public LinkedHashMap<String, Integer> ImageLevelsRespaldo = new LinkedHashMap<String, Integer>() {{
+        put("2B.jpg",4);
+        put("Medusa.png",9);
+        put("Anime1.jpg",16);
+
+    }};
+    private int SourceImageCrop = 0;
     public ArrayList AllImageViewPuzzle;
 
     private String NameUser;
 
+    private int LevelTime1 = 999999;
+    private int LevelTime2 = 999999;
+    private int LevelTime3 = 999999;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
          File dir_to_clear = new File(getApplicationContext().getCacheDir().toString());
          cleanDir(dir_to_clear);
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, 1);
+        }
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, 1);
+        }
 
-
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, 1);
+        }
+        soundTap = soundPool.load(getApplicationContext(),R.raw.blip,1);
+        soundDrap = soundPool.load(getApplicationContext(),R.raw.boing_x,1);
         super.onCreate(savedInstanceState);
          setContentView(R.layout.activity_main);
 
          conex = new ConexionSQLiteHelper(this,"bd_usuarios",null,10);
 
          NameUser = getIntent().getStringExtra("NAME_USER").toString();
-        TextView nameTextview = (TextView)findViewById(R.id.nameUser);
+        getMinimunScoreLevel(NameUser);
+         TextView nameTextview = (TextView)findViewById(R.id.nameUser);
         nameTextview.post(new Runnable() {
              @Override
              public void run() {
@@ -428,9 +496,81 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
 
         }
+
+
+
+        ButtonPickImages = (Button)findViewById(R.id.Select_Images);
+
+
+        class ButtonToPickImagesListener implements View.OnClickListener{
+             @Override
+             public void onClick(View v){
+                 Toast.makeText(MainActivity.this,String.format("Se selecciono el boton de seleccionar images"),Toast.LENGTH_LONG).show();
+                 pickImagesIntent();
+             }
+
+        }
+
+
         MyButtonClicklistener ll = new MyButtonClicklistener(this);
         ButtonBackToStart.setOnClickListener(ll);
 
+        ButtonToPickImagesListener listener_to_pick_images = new ButtonToPickImagesListener();
+        ButtonPickImages.setOnClickListener(listener_to_pick_images);
+
+
+        class ButtonToTakePhotoListener implements View.OnClickListener{
+            @Override
+            public void onClick(View v){
+                Toast.makeText(MainActivity.this,"Se presiono el boton de tomar la foto",Toast.LENGTH_LONG).show();
+                Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(intent,100);
+            }
+
+        }
+        if(ContextCompat.checkSelfPermission(MainActivity.this, Manifest.permission.CAMERA) !=
+                PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(MainActivity.this, new String[]{
+                    Manifest.permission.CAMERA
+            },100);
+        }
+        ButtonToTakePhoto = (Button) findViewById(R.id.buttonTakePhoto);
+        ButtonToTakePhotoListener ButtonToTakePhoto_listener = new ButtonToTakePhotoListener();
+        ButtonToTakePhoto.setOnClickListener(ButtonToTakePhoto_listener);
+
+        class ButtonUseInnerImagesListener implements View.OnClickListener{
+            @Override
+            public void onClick(View v){
+                Toast.makeText(MainActivity.this,"Se presiono el boton de usar las imagenes internas",Toast.LENGTH_LONG).show();
+                IndexImageLevels = 0;
+                SourceImageCrop = 0;
+                ImageLevels = (LinkedHashMap<String, Integer>) ImageLevelsRespaldo.clone();
+                String firstKey = (String)ImageLevels.keySet().toArray()[IndexImageLevels];
+                Integer valueForFirstKey =  ImageLevels.get(firstKey);
+                try {
+                    checkCroppedSaved(firstKey,valueForFirstKey,SourceImageCrop,"");
+                    createImageViewsPuzzle(firstKey,0);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+            }
+
+        }
+        ButtonUseInnerImages = (Button)findViewById(R.id.buttonInternalImages);
+        ButtonUseInnerImagesListener ButtonUseInnerImagesListenerVar = new ButtonUseInnerImagesListener();
+        ButtonUseInnerImages.setOnClickListener(ButtonUseInnerImagesListenerVar);
+        class SwitchSoundPoolListener implements  CompoundButton.OnCheckedChangeListener{
+
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean b) {
+                //Toast.makeText(getApplicationContext(),"Cambio el switch",Toast.LENGTH_LONG).show();
+                enableSound = switchSound.isChecked();
+            }
+        }
+        switchSound = (CompoundButton)findViewById(R.id.switchSoundPool);
+        SwitchSoundPoolListener SwitchSoundPoolListenerVar = new SwitchSoundPoolListener();
+        switchSound.setOnCheckedChangeListener(SwitchSoundPoolListenerVar);
         web_view_help = findViewById(R.id.WebViewHelp);
         web_view_help.loadUrl("file:///android_asset/help/help_page/index.html");
         GameLayout = (TableLayout) findViewById(R.id.GameLayout);
@@ -465,12 +605,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void starPuzzle() throws IOException {
         String firstKey = (String)ImageLevels.keySet().toArray()[IndexImageLevels];
         Integer valueForFirstKey =  ImageLevels.get(firstKey);
-        checkCroppedSaved(firstKey,valueForFirstKey);
+        checkCroppedSaved(firstKey,valueForFirstKey,SourceImageCrop,"");
 
-        createImageViewsPuzzle(firstKey);
+        createImageViewsPuzzle(firstKey,0);
     }
-    private void createImageViewsPuzzle(String NameImage){
+    private void createImageViewsPuzzle(String NameImage,int ModeImage){
+
+        if(ModeImage == 1){
+            NameImage = new File(NameImage).getName();
+        }
         File folder_cropped = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
+
+
+
+
+
+
+
         /*if(!folder_cropped.exists()){
             try {
                 checkCroppedSaved();
@@ -728,9 +879,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
 
     }
-    private void checkCroppedSaved(String NameImage,Integer NumberDivision) throws IOException {
+    private void checkCroppedSaved(String NameImage,Integer NumberDivision,int type_search,String FolderSelected) throws IOException {
 
         File file_x = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
+
+        String pathImage = "";
+        if(type_search == 1){
+            pathImage = NameImage;
+            NameImage = new File(NameImage).getName();
+            NameImage = NameImage.replace(";","_");
+        }
+
+
+
+
+
         if (file_x.exists()) {
             //deleteRecursive(file_x);
         } else {
@@ -758,7 +921,24 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             File file_image_a = new File(String.format("%s/tmpImage",getApplicationContext().getCacheDir().toString()));
             file_image_a.createNewFile();
-            InputStream is = getApplicationContext().getAssets().open(String.format("ImagesPuzzle/%s",NameImage));
+
+
+            //Aqui debo de introducir la ueva lógica para manejar las imagenes de la camara
+            //File sd = new File (Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)+ "/"+"PuzzleImages");
+            //FileInputStream();
+            InputStream is;
+            if(type_search == 0){
+                is = getApplicationContext().getAssets().open(String.format("ImagesPuzzle/%s",NameImage));
+            }else   {
+                //is = new FileInputStream(new File(String.format("%s/PuzzleImages/%s",Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),NameImage)));
+                is = new FileInputStream(new File(pathImage));
+            }
+
+
+
+
+
+
             int size = is.available();
             byte[] buffer = new byte[size];
             is.read(buffer);
@@ -872,6 +1052,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public boolean onLongClick (View v){
         //Toast.makeText(MainActivity.this,"OnLongClick",Toast.LENGTH_LONG).show();
+        if(enableSound) {
+            soundPool.play(soundTap, 1.0f, 1.0f, 1, 0, 1.0f);
+        }
+
         dataImageview datac = (dataImageview)v.getTag();
         actual_dataImageview_on_long_click = datac;
         Log.d("ONLONGCLICK",datac.ImaAct);
@@ -884,6 +1068,210 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         //Log.i("PUZZLE_TERMINADO",String.valueOf(checkPuzzleResolve()));
         return false;
     }
+    private void pickImagesIntent(){
+        Intent intent = new Intent();
+        intent.setType("image/*");
+        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+        intent.setAction(Intent.ACTION_GET_CONTENT);
+        startActivityForResult(Intent.createChooser(intent,"Select Images To Puzzle"),PICK_IMAGES_CODE);
+
+    }
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+
+        if(requestCode == PICK_IMAGES_CODE){
+            if(resultCode == Activity.RESULT_OK){
+                if(data.getClipData() != null){
+                    int count = data.getClipData().getItemCount();
+                    if(count < 3){
+                        Toast.makeText(MainActivity.this, "Debes de seleccionar al menos 3 fotos", Toast.LENGTH_LONG).show();
+                    }
+                    else {
+                        try{
+                            ImagesUrisSelected.clear();
+                            ArrayList<String> lista_to_desordenar = new ArrayList<>();
+                            for (int i = 0; i < count; i++) {
+
+                                Uri imageUri = data.getClipData().getItemAt(i).getUri();
+                                //String nombre_imagen_buscar = new File(data.getClipData().getItemAt(i).getUri().getPath()).getAbsolutePath();
+                                String nombre_imagen_buscar = new FileUtils(getApplicationContext()).getPath(imageUri);
+                                ImagesUrisSelected.add(imageUri);
+                                lista_to_desordenar.add(nombre_imagen_buscar);
+
+                            }
+                            ArrayList<String> lista_desordenada = shuffleArrayList(lista_to_desordenar);
+                            ArrayList<String> lista_usar = new ArrayList<String>(lista_desordenada.subList(0,3));
+                            int level = 1;
+                            IndexImageLevels = 0;
+                            SourceImageCrop = 1;
+                            ImageLevels.clear();
+                            for (String nombre_image: lista_usar){
+                                if(level == 1){
+                                    ImageLevels.put(nombre_image,4);
+                                }else if(level == 2){
+                                    ImageLevels.put(nombre_image,4);
+                                }else if(level == 3){
+                                    ImageLevels.put(nombre_image,4);
+                                }
+                               level += 1;
+                            }
+                            String firstKey = (String)ImageLevels.keySet().toArray()[IndexImageLevels];
+                            Integer valueForFirstKey =  ImageLevels.get(firstKey);
+                            checkCroppedSaved(firstKey,valueForFirstKey,SourceImageCrop,"");
+                            createImageViewsPuzzle(firstKey,1);
+
+                        }catch (Exception e){
+
+                            e.printStackTrace();
+                        }
+                    }
+                }else{
+
+                    Toast.makeText(MainActivity.this, "Debes de seleccionar al menos 3 fotos", Toast.LENGTH_LONG).show();
+                    Uri imageUri = data.getData();
+                    ImagesUrisSelected.add(imageUri);
+                }
+            }
+
+        }else if(requestCode == 100){
+            //Bitmap captureImage = (Bitmap) data.getExtras().get("data");
 
 
+
+
+            if (ContextCompat.checkSelfPermission(MainActivity.this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+
+                // Permission is not granted
+                // Should we show an explanation?
+                if (ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                    // Show an explanation to the user *asynchronously* -- don't block
+                    // this thread waiting for the user's response! After the user
+                    // sees the explanation, try again to request the permission.
+                } else {
+                    // No explanation needed; request the permission
+                    ActivityCompat.requestPermissions(MainActivity.this,
+                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                            200);
+
+                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                    // app-defined int constant. The callback method gets the
+                    // result of the request.
+                }
+            } else {
+                // Permission has already been granted
+            }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+            DateFormat dateFormat = new SimpleDateFormat("yyyy_MM_dd HH_mm_ss");
+            Date date = new Date();
+            System.out.println(dateFormat.format(date));
+            String filename = String.format("%s.png",dateFormat.format(date));
+            //File sd =new File(Environment.getExternalStorageDirectory(), "puzzleImages");
+            File sd = new File (Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)+ "/"+"PuzzleImages");
+            //File sd = new File(String.format("%s/ImagesCamera", getApplicationContext().getFilesDir().toString()));
+            if (!sd.exists()) {
+                sd.mkdirs();
+            }
+
+            File dest = new File(sd, filename);
+
+            Bitmap captureImage = (Bitmap) data.getExtras().get("data");
+            try {
+                dest.createNewFile();
+                FileOutputStream out = new FileOutputStream(dest);
+                captureImage.compress(Bitmap.CompressFormat.PNG, 100, out);
+                out.flush();
+                out.close();
+            } catch (Exception e) {
+                Log.d("err","un error");
+                e.printStackTrace();
+            }
+
+
+
+
+
+        }
+
+
+    }
+    @SuppressLint("Range")
+    public String getImageFilePath(Uri uri) {
+        String path = null, image_id = null;
+
+        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
+        if (cursor != null) {
+            cursor.moveToFirst();
+            image_id = cursor.getString(0);
+            image_id = image_id.substring(image_id.lastIndexOf(":") + 1);
+            cursor.close();
+        }
+
+        cursor = getContentResolver().query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, null, MediaStore.Images.Media._ID + " = ? ", new String[]{image_id}, null);
+        if (cursor!=null) {
+            cursor.moveToFirst();
+            path = cursor.getString(cursor.getColumnIndex(MediaStore.Images.Media.DATA));
+            cursor.close();
+        }
+        return path;
+    }
+
+
+    @SuppressLint("Range")
+    private void getMinimunScoreLevel(String NameUser){
+        ConexionSQLiteHelper conn = new ConexionSQLiteHelper(this,"bd_usuarios",null,10);
+        SQLiteDatabase db2 = conn.getReadableDatabase();
+        Cursor c = db2.rawQuery(String.format("SELECT * FROM Usuario INNER JOIN Puntaje ON Usuario.user = Puntaje.user WHERE Usuario.user = %s AND Puntaje.nivel = 1 AND Puntaje.puntaje = (SELECT min(puntaje) FROM Puntaje WHERE user = %s AND nivel = 1 )", DatabaseUtils.sqlEscapeString(NameUser),DatabaseUtils.sqlEscapeString(NameUser)),null);
+        try {
+            while (c.moveToNext()) {
+                LevelTime1 =(int) c.getFloat(c.getColumnIndex("puntaje"));
+            }
+        } finally {
+            c.close();
+        }
+        c = db2.rawQuery(String.format("SELECT * FROM Usuario INNER JOIN Puntaje ON Usuario.user = Puntaje.user WHERE Usuario.user = %s AND Puntaje.nivel = 2 AND Puntaje.puntaje = (SELECT min(puntaje) FROM Puntaje WHERE user = %s AND nivel = 2 )", DatabaseUtils.sqlEscapeString(NameUser),DatabaseUtils.sqlEscapeString(NameUser)),null);
+        try {
+            while (c.moveToNext()) {
+                LevelTime2 =(int) c.getFloat(c.getColumnIndex("puntaje"));
+            }
+        } finally {
+            c.close();
+        }
+        c = db2.rawQuery(String.format("SELECT * FROM Usuario INNER JOIN Puntaje ON Usuario.user = Puntaje.user WHERE Usuario.user = %s AND Puntaje.nivel = 3 AND Puntaje.puntaje = (SELECT min(puntaje) FROM Puntaje WHERE user = %s AND nivel = 3 )", DatabaseUtils.sqlEscapeString(NameUser),DatabaseUtils.sqlEscapeString(NameUser)),null);
+        try {
+            while (c.moveToNext()) {
+                LevelTime3 =(int) c.getFloat(c.getColumnIndex("puntaje"));
+            }
+        } finally {
+            c.close();
+        }
+    }
 }
