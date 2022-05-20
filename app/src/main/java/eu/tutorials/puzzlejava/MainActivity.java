@@ -1,9 +1,13 @@
 package eu.tutorials.puzzlejava;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.LinearSnapHelper;
+import androidx.recyclerview.widget.RecyclerView;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
@@ -47,7 +51,20 @@ import android.widget.TableRow;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 import com.google.android.material.navigation.NavigationView;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.storage.FileDownloadTask;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import org.opencv.android.OpenCVLoader;
 
@@ -59,6 +76,7 @@ import java.io.InputStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -233,8 +251,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                      }else if(levelgame == 3){
                                          LevelTime3 = threadTimeObjectSync.getSeconds();
                                      }*/
+                                     int segundos_user = threadTimeObjectSync.getSeconds();
                                      values.put(Puntaje_Esquema.CAMPO_NIVEL, levelgame);
-                                     values.put(Puntaje_Esquema.CAMPO_PUNTAJE,threadTimeObjectSync.getSeconds());
+                                     values.put(Puntaje_Esquema.CAMPO_PUNTAJE,segundos_user);
                                      values.put(Puntaje_Esquema.CAMPO_USER,NameUser);
 
                                      /*String pattern = "MM-dd-yyyy";
@@ -256,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                                      SQLiteDatabase db = conex.getWritableDatabase();
                                      Long id_resultante = db.insert(Puntaje_Esquema.TABLA_PUNTAJE,UsuarioEsquema.CAMPO_ID,values);
-
+                                     InsertPuntajeUsuarioFireStore(NameUser,levelgame,segundos_user,now);
 
 
                                      //NameUser
@@ -280,9 +299,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                              @Override
                                              public void run() {
                                                  try {
-                                                     checkCroppedSaved(firstKey2, valueForFirstKey2,SourceImageCrop,"");
-                                                     createImageViewsPuzzle(firstKey2,SourceImageCrop);
-                                                 } catch (IOException e) {
+                                                    if(SourceImageCrop == 2){
+                                                        String FFILE= getImageFromFirebase(firstKey2).getAbsolutePath();
+                                                        checkCroppedSaved(FFILE, valueForFirstKey2, SourceImageCrop, "");
+                                                        createImageViewsPuzzle(FFILE, SourceImageCrop);
+                                                    }else {
+
+                                                        checkCroppedSaved(firstKey2, valueForFirstKey2, SourceImageCrop, "");
+                                                        createImageViewsPuzzle(firstKey2, SourceImageCrop);
+                                                    }
+                                                } catch (IOException e) {
                                                      e.printStackTrace();
                                                  }
 
@@ -382,7 +408,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private Button ButtonPickImages;
     private Button ButtonToTakePhoto;
     private Button ButtonUseInnerImages;
+    private Button ButtonUseFirestoreImages;
     private ArrayList<Uri> ImagesUrisSelected = new ArrayList<>();
+
     private static final int PICK_IMAGES_CODE = 0;
 
     private ConexionSQLiteHelper conex;
@@ -392,6 +420,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private int soundDrap;
     private CompoundButton switchSound;
     private boolean enableSound = true;
+
+
+    private FirebaseFirestore dbf = FirebaseFirestore.getInstance();
+    FirebaseStorage storageFirebase = FirebaseStorage.getInstance("gs://p3-uoc-c6376.appspot.com");
+    StorageReference storageRef = storageFirebase.getReference();
+
+    private ArrayList<HashMap<String,String>> ListaPuntuacionesFirestore;
+    private RecyclerView recyclerFirestorePuntajes;
+
+
 
     private Thread threadTimeJava;
     private ThreadTimeObjectSync threadTimeObjectSync;
@@ -409,6 +447,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         put("Medusa.png",9);
         put("Anime1.jpg",16);
 
+    }};
+    public LinkedHashMap<String, Integer> ImagesLevelsFirestore = new LinkedHashMap<String, Integer>() {{
+        put("wp8220339.jpg",4);
+        put("shakugan.jpg",9);
+        put("242706.jpg",16);
     }};
     private int SourceImageCrop = 0;
     public ArrayList AllImageViewPuzzle;
@@ -476,6 +519,40 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         ButtonBackToStart = (Button)findViewById(R.id.buttonBackToStart);
         AppCompatActivity _this = this;
+
+        recyclerFirestorePuntajes = (RecyclerView) findViewById(R.id.RecyclerViewPuntuaciones);
+        //LinearLayoutManager ccc = new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false);
+
+        recyclerFirestorePuntajes.setLayoutManager(new LinearLayoutManager(this,LinearLayoutManager.VERTICAL,false));
+        LinearSnapHelper snapHelper  = new LinearSnapHelper();
+        snapHelper.attachToRecyclerView(recyclerFirestorePuntajes);
+
+
+
+
+
+        //TestingFirebase();
+        if(ComprobateIfUserExistsFireStore(NameUser) == 0){
+            InsertUsuarioFireStore(NameUser);
+        }
+        getTopTenUsersFirestore(1);
+        ArrayList<HashMap<String,String>> data_rec = new ArrayList<>();
+        data_rec.addAll(getTopTenUsersFirestore(1));
+        data_rec.addAll(getTopTenUsersFirestore(2));
+        data_rec.addAll(getTopTenUsersFirestore(3));
+        AdapterDatos adapter = new AdapterDatos(data_rec);
+        recyclerFirestorePuntajes.setAdapter(adapter);
+
+
+        /*File sal = getImageFromFirebase("wp8220339.jpg");
+        if(sal != null){
+            try {
+                checkCroppedSaved(sal.getAbsolutePath(), 4, 1, "");
+            }catch (Exception e){
+                e.printStackTrace();
+            }
+        }*/
+
 
          class MyButtonClicklistener implements View.OnClickListener
         {
@@ -560,6 +637,32 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         ButtonUseInnerImages = (Button)findViewById(R.id.buttonInternalImages);
         ButtonUseInnerImagesListener ButtonUseInnerImagesListenerVar = new ButtonUseInnerImagesListener();
         ButtonUseInnerImages.setOnClickListener(ButtonUseInnerImagesListenerVar);
+
+        class ButtonUseFirestoreImagesListener implements View.OnClickListener{
+            @Override
+            public void onClick(View v){
+                Toast.makeText(MainActivity.this,"Se presiono el boton de usar las imagenes FireStore",Toast.LENGTH_LONG).show();
+                IndexImageLevels = 0;
+                SourceImageCrop = 2;
+                ImageLevels = (LinkedHashMap<String, Integer>) ImagesLevelsFirestore.clone();
+                String firstKey = (String)ImageLevels.keySet().toArray()[IndexImageLevels];
+                Integer valueForFirstKey =  ImageLevels.get(firstKey);
+                try {
+                    String FFILE = getImageFromFirebase(firstKey).getAbsolutePath();
+                    checkCroppedSaved(FFILE,valueForFirstKey,SourceImageCrop,"");
+                    createImageViewsPuzzle(FFILE,2);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+        ButtonUseFirestoreImages = (Button) findViewById(R.id.buttonFirestoreImages);
+        ButtonUseFirestoreImagesListener ButtonUseFirestoreImagesListenerVar = new ButtonUseFirestoreImagesListener();
+        ButtonUseFirestoreImages.setOnClickListener(ButtonUseFirestoreImagesListenerVar);
+
+
+
         class SwitchSoundPoolListener implements  CompoundButton.OnCheckedChangeListener{
 
             @Override
@@ -611,7 +714,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
     private void createImageViewsPuzzle(String NameImage,int ModeImage){
 
-        if(ModeImage == 1){
+        if(ModeImage == 1 || ModeImage == 2){
             NameImage = new File(NameImage).getName();
         }
         File folder_cropped = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
@@ -884,7 +987,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         File file_x = new File(String.format("%s/Images", getApplicationContext().getFilesDir().toString()));
 
         String pathImage = "";
-        if(type_search == 1){
+        if(type_search == 1 || type_search == 2){
             pathImage = NameImage;
             NameImage = new File(NameImage).getName();
             NameImage = NameImage.replace(";","_");
@@ -1110,9 +1213,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                                 if(level == 1){
                                     ImageLevels.put(nombre_image,4);
                                 }else if(level == 2){
-                                    ImageLevels.put(nombre_image,4);
+                                    ImageLevels.put(nombre_image,9);
                                 }else if(level == 3){
-                                    ImageLevels.put(nombre_image,4);
+                                    ImageLevels.put(nombre_image,16);
                                 }
                                level += 1;
                             }
@@ -1201,20 +1304,22 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 sd.mkdirs();
             }
 
-            File dest = new File(sd, filename);
+            if(data.getExtras() != null) {
 
-            Bitmap captureImage = (Bitmap) data.getExtras().get("data");
-            try {
-                dest.createNewFile();
-                FileOutputStream out = new FileOutputStream(dest);
-                captureImage.compress(Bitmap.CompressFormat.PNG, 100, out);
-                out.flush();
-                out.close();
-            } catch (Exception e) {
-                Log.d("err","un error");
-                e.printStackTrace();
+                File dest = new File(sd, filename);
+
+                Bitmap captureImage = (Bitmap) data.getExtras().get("data");
+                try {
+                    dest.createNewFile();
+                    FileOutputStream out = new FileOutputStream(dest);
+                    captureImage.compress(Bitmap.CompressFormat.PNG, 100, out);
+                    out.flush();
+                    out.close();
+                } catch (Exception e) {
+                    Log.d("err", "un error");
+                    e.printStackTrace();
+                }
             }
-
 
 
 
@@ -1272,6 +1377,370 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
         } finally {
             c.close();
+        }
+    }
+
+    private void TestingFirebase(){
+        Map<String, Object> user = new HashMap<>();
+        user.put("user", "Un Usuario");
+
+
+// Add a new document with a generated ID
+        dbf.collection("Usuario")
+                .add(user)
+                .addOnSuccessListener(new OnSuccessListener<DocumentReference>() {
+                    @Override
+                    public void onSuccess(DocumentReference documentReference) {
+                        Log.d("FIREBASE_CORRECT", "DocumentSnapshot added with ID: " + documentReference.getId());
+                        Toast.makeText(getApplicationContext(),"Se ha insertado correctamente el usuario",Toast.LENGTH_LONG).show();
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        Log.w("FIREBASE_INCORRECT", "Error adding document", e);
+                        Toast.makeText(getApplicationContext(),"Ha habido un error al insertar el usuario",Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+    private int ComprobateIfUserExistsFireStore(String UserName){
+
+        /*dbf.collection("Usuario").whereEqualTo("user",UserName).get()
+                .addOnCompleteListener(new OnCompleteListener<QuerySnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<QuerySnapshot> task) {
+                        if (task.isSuccessful()) {
+                            //QueryDoQueryDocumentSnapshot
+                            boolean exits_user = false;
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                Log.d("FF", document.getId() + " => " + document.getData());
+                                exits_user = true;
+                                break;
+                            }
+
+                        } else {
+                            Log.w("FF", "Error getting documents.", task.getException());
+
+                        }
+
+                    }
+                });*/
+        try {
+            //QuerySnapshot resultado = Tasks.await(dbf.collection("Usuario").whereEqualTo("user", UserName).get());
+            //resultado.getDocuments();
+            class HolderData{
+                public QuerySnapshot resultado;
+            }
+
+            HolderData resultado = new HolderData();
+            class ThreadQuery extends Thread {
+
+                private HolderData resultado;
+                private FirebaseFirestore dbf;
+                private String UserName;
+
+                public ThreadQuery(HolderData resultado,FirebaseFirestore dbf,String UserName) {
+                    this.resultado = resultado;
+                    this.dbf = dbf;
+                    this.UserName = UserName;
+                }
+
+                @Override
+                public void run() {
+
+                        try {
+                            QuerySnapshot result = Tasks.await(dbf.collection("Usuario").whereEqualTo("user", UserName).get());
+                            synchronized(this.resultado){
+                                this.resultado.resultado = result;
+                            }
+                        }catch (Exception e){
+                            e.printStackTrace();
+                        }
+
+                }
+            }
+
+            Thread tq = new ThreadQuery(resultado,dbf,UserName);
+            tq.start();
+            tq.join();
+            if(resultado.resultado.getDocuments().size() > 0){
+                return 1;
+            }else{
+                return 0;
+            }
+
+        }catch (Exception e){
+            return -1;
+        }
+
+    }
+    private boolean InsertUsuarioFireStore(String UserName){
+        try {
+            class HolderData {
+                public DocumentReference resultado = null;
+            }
+            HolderData resultado = new HolderData();
+            class ThreadQuery extends Thread {
+
+                private HolderData resultado;
+                private FirebaseFirestore dbf;
+                private String UserName;
+
+                public ThreadQuery(HolderData resultado, FirebaseFirestore dbf, String UserName) {
+                    this.resultado = resultado;
+                    this.dbf = dbf;
+                    this.UserName = UserName;
+                }
+
+                @Override
+                public void run() {
+
+                    try {
+                        Map<String, Object> user = new HashMap<>();
+                        user.put("user", UserName);
+
+
+                        // Add a new document with a generated ID
+                        DocumentReference result = Tasks.await(dbf.collection("Usuario").add(user));
+
+
+                        synchronized (this.resultado) {
+                            this.resultado.resultado = result;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+
+            Thread tq = new ThreadQuery(resultado, dbf, UserName);
+            tq.start();
+            tq.join();
+            if(resultado.resultado != null) {
+                return true;
+            }else{
+                return false;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+
+
+
+    }
+    private boolean InsertPuntajeUsuarioFireStore(String UserName,int level,int timeLevel, Date dateLevel){
+        try {
+            class HolderData {
+                public DocumentReference resultado = null;
+            }
+            HolderData resultado = new HolderData();
+            class ThreadQuery extends Thread {
+
+                private HolderData resultado;
+                private FirebaseFirestore dbf;
+                private String UserName;
+                private int level;
+                private int timeLevel;
+                private Date dateLevel;
+
+                public ThreadQuery(HolderData resultado, FirebaseFirestore dbf, String UserName,int level, int timeLevel, Date dateLevel) {
+                    this.resultado = resultado;
+                    this.dbf = dbf;
+                    this.UserName = UserName;
+                    this.level = level;
+                    this.timeLevel = timeLevel;
+                    this.dateLevel = dateLevel;
+                }
+
+                @Override
+                public void run() {
+
+                    try {
+                        Map<String, Object> puntaje = new HashMap<>();
+                        puntaje.put("user", UserName);
+                        puntaje.put("nivel",level);
+                        puntaje.put("puntaje",timeLevel);
+                        puntaje.put("fecha",dateLevel);
+
+
+                        // Add a new document with a generated ID
+                        DocumentReference result = Tasks.await(dbf.collection("Puntaje").add(puntaje));
+
+
+                        synchronized (this.resultado) {
+                            this.resultado.resultado = result;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+
+            Thread tq = new ThreadQuery(resultado, dbf, UserName,level,timeLevel,dateLevel);
+            tq.start();
+            tq.join();
+            if(resultado.resultado != null) {
+                return true;
+            }else{
+                return false;
+            }
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+
+
+
+    }
+    private ArrayList<HashMap<String,String>> getTopTenUsersFirestore(int levelGet){
+        try {
+            ArrayList<HashMap<String, String>> ListaPuntajes = new ArrayList<>();
+            class HolderData {
+                public QuerySnapshot resultado = null;
+            }
+            HolderData resultado = new HolderData();
+            class ThreadQuery extends Thread {
+
+                private HolderData resultado;
+                private FirebaseFirestore dbf;
+
+
+                public ThreadQuery(HolderData resultado, FirebaseFirestore dbf) {
+                    this.resultado = resultado;
+                    this.dbf = dbf;
+
+                }
+
+                @Override
+                public void run() {
+
+                    try {
+                        QuerySnapshot result = Tasks.await(dbf.collection("Puntaje").whereEqualTo("nivel",levelGet).orderBy("puntaje", Query.Direction.ASCENDING).limit(10).get());
+
+                        synchronized (this.resultado) {
+                            this.resultado.resultado = result;
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                }
+            }
+            Thread tq = new ThreadQuery(resultado, dbf);
+            tq.start();
+            tq.join();
+            if (resultado.resultado != null) {
+                ArrayList<QueryDocumentSnapshot> dd = new ArrayList(Arrays.asList(resultado.resultado.getDocuments().toArray()));
+                for(QueryDocumentSnapshot que: dd){
+                    Log.d("","");
+                    HashMap<String, String> pont = new HashMap<String,String>();
+                    pont.put("Usuario",que.getData().get("user").toString());
+                    pont.put("Nivel",que.getData().get("nivel").toString());
+                    pont.put("Puntaje", que.getData().get("puntaje").toString());
+                    ListaPuntajes.add(pont);
+
+                };
+
+                return ListaPuntajes;
+
+            } else {
+                return null;
+            }
+
+        }catch(Exception e){
+            return null;
+        }
+    }
+    private File getImageFromFirebase(String NameFile){
+        StorageReference islandRef = storageRef.child(NameFile);
+        /*try {
+
+            //File localFile =  File.createTempFile("imageFireStore", "jpg");
+            File localFile = new File(String.format("%s/tmpImageFirestore",getApplicationContext().getCacheDir().toString()));
+            if(localFile.exists()){
+                localFile.delete();
+            }
+            localFile.createNewFile();
+            islandRef.getFile(localFile).addOnSuccessListener(new OnSuccessListener<FileDownloadTask.TaskSnapshot>() {
+                @Override
+                public void onSuccess(FileDownloadTask.TaskSnapshot taskSnapshot) {
+                    // Local temp file has been created
+                    Log.d("Archivo Storage","wwwww");
+                }
+            }).addOnFailureListener(new OnFailureListener() {
+                @Override
+                public void onFailure(@NonNull Exception exception) {
+                    // Handle any errors
+                    Log.d("Archivo Storage","wwwww");
+                }
+            });
+            Log.d("Archivo Storage","wwwww");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
+
+
+
+
+
+
+
+        try {
+            class HolderData {
+                public File resultado = new File(String.format("%s/tmpImageFirestore",getApplicationContext().getCacheDir().toString()));
+            }
+            HolderData resultado = new HolderData();
+            class ThreadQuery extends Thread {
+
+                private HolderData resultado;
+                private FirebaseFirestore dbf;
+
+
+                public ThreadQuery(HolderData resultado, FirebaseFirestore dbf) {
+                    this.resultado = resultado;
+                    this.dbf = dbf;
+
+                }
+
+                @Override
+                public void run() {
+
+                    try {
+                        synchronized (this.resultado){
+                            if(this.resultado.resultado.exists()){
+                                this.resultado.resultado.delete();
+                            }
+                            this.resultado.resultado.createNewFile();
+                            FileDownloadTask.TaskSnapshot result = Tasks.await( islandRef.getFile(this.resultado.resultado));
+                        }
+
+
+
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        synchronized (this.resultado) {
+                            this.resultado.resultado = null;
+                        }
+                    }
+
+                }
+            }
+            Thread tq = new ThreadQuery(resultado, dbf);
+            tq.start();
+            tq.join();
+            if (resultado.resultado != null) {
+                Log.d("Archivo descargado","");
+                return resultado.resultado;
+            }
+            else{
+                return null;
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+            return null;
         }
     }
 }

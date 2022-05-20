@@ -52,12 +52,68 @@
                     android:layout_height="wrap_content"
                     android:text="Imagenes Internas" />
 
+                <Button
+                    android:id="@+id/buttonFirestoreImages"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Imagenes Firestore" />
+
                 <Switch
                     android:id="@+id/switchSoundPool"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:checked="true"
                     android:text="Sonido" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#69A8A6"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="0"
+                        android:gravity="center_horizontal"
+                        android:orientation="horizontal">
+
+                        <TextView
+                            android:id="@+id/RecyclerTitleName"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Usuario"
+                            android:textAlignment="center" />
+
+                        <TextView
+                            android:id="@+id/RecyclerTitleTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Tiempo"
+                            android:textAlignment="center" />
+
+                        <TextView
+                            android:id="@+id/RecyclerTitleLevel"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Level"
+                            android:textAlignment="center" />
+                    </LinearLayout>
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/RecyclerViewPuntuaciones"
+                        android:layout_width="wrap_content"
+                        android:layout_height="150dp"
+                        android:layout_gravity="center"
+                        android:layout_weight="0"
+
+                        android:orientation="horizontal" />
+                    /-->
+                </LinearLayout>
+
             </LinearLayout>
 
         </com.google.android.material.navigation.NavigationView>
