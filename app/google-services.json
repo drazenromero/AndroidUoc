@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "648759725967",
+    "project_id": "p3-uoc-c6376",
+    "storage_bucket": "p3-uoc-c6376.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:648759725967:android:7dbc46419b26a564f085fa",
+        "android_client_info": {
+          "package_name": "eu.tutorials.puzzlejava"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "648759725967-a3qpcd9go8e2dlq92kqvfi5eu6nijmm8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9RohwFCRkkNZqXBnj563q4zbFHwJsKaM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "648759725967-a3qpcd9go8e2dlq92kqvfi5eu6nijmm8.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
