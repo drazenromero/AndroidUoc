@@ -14,14 +14,14 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="Bienvenida"
+        android:text="@string/Bienvenida"
         android:textSize="20dp" />
 
     <TextView
         android:id="@+id/labelUser"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:text="Usuario"
+        android:text="@string/labelUser"
         android:textAlignment="center" />
 
     <EditText
@@ -35,6 +35,6 @@
         android:id="@+id/buttonStart"
         android:layout_width="200dp"
         android:layout_height="wrap_content"
-        android:text="Iniciar" />
+        android:text="@string/buttonStart" />
 
 </LinearLayout>

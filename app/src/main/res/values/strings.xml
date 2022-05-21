@@ -1,3 +1,25 @@
 <resources>
-    <string name="app_name">puzzleJava</string>
+    <string name="app_name">PuzleJava</string>
+    <string name="labelCongratulations">Felicitaciones has terminado el juego. Mejores Puntuaciones</string>
+    <string name="buttonBack">Volver</string>
+    <string name="TitleLevel">Nivel</string>
+    <string name="TitleTime">Tiempo</string>
+    <string name="TitleFecha">Fecha</string>
+    <string name="Bienvenida">Bienvenida</string>
+    <string name="labelUser">Usuario</string>
+    <string name="buttonStart">Iniciar</string>
+    <string name="UserRecycler">Usuario</string>
+    <string name="TimeRecycler">Tiempo</string>
+    <string name="LevelRecycler">Nivel</string>
+    <string name="buttonBackToStart">Volver</string>
+    <string name="Select_Images">Elige imágenes</string>
+    <string name="buttonTakePhoto">Tomar Fotografia</string>
+    <string name="buttonInternalImages">Imagenes Internas</string>
+    <string name="buttonFirestoreImages">Imagenes Firestore</string>
+    <string name="switchSoundPool">Sonido</string>
+    <string name="RecyclerTitleName">Usuario</string>
+    <string name="RecyclerTitleTime">Tiempo</string>
+    <string name="RecyclerTitleLevel">Nivel</string>
+    <string name="nameUser">Nombre de usuario</string>
+    <string name="TimeCounter">Tiempo</string>
 </resources>

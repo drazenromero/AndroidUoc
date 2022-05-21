@@ -29,7 +29,8 @@ public class ThreadTime extends Thread{
                             @Override
                             public void run() {
                                 TextView txt = parentActivity.findViewById(R.id.TimeCounter);
-                                txt.setText(String.format("Time: %dS", threadTimeObjectSync.getSeconds()));
+                                String text = parentActivity.getResources().getString(R.string.TimeCounter);
+                                txt.setText(String.format(text+": %dS", threadTimeObjectSync.getSeconds()));
                             }
                         });
                     }else{

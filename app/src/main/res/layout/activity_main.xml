@@ -32,38 +32,38 @@
                     android:id="@+id/buttonBackToStart"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Volver" />
+                    android:text="@string/buttonBackToStart" />
 
                 <Button
                     android:id="@+id/Select_Images"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Pick Images" />
+                    android:text="@string/Select_Images" />
 
                 <Button
                     android:id="@+id/buttonTakePhoto"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Tomar Fotografia" />
+                    android:text="@string/buttonTakePhoto" />
 
                 <Button
                     android:id="@+id/buttonInternalImages"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Imagenes Internas" />
+                    android:text="@string/buttonInternalImages" />
 
                 <Button
                     android:id="@+id/buttonFirestoreImages"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Imagenes Firestore" />
+                    android:text="@string/buttonFirestoreImages" />
 
                 <Switch
                     android:id="@+id/switchSoundPool"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:checked="true"
-                    android:text="Sonido" />
+                    android:text="@string/switchSoundPool" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -83,7 +83,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Usuario"
+                            android:text="@string/RecyclerTitleName"
                             android:textAlignment="center" />
 
                         <TextView
@@ -91,7 +91,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Tiempo"
+                            android:text="@string/RecyclerTitleTime"
                             android:textAlignment="center" />
 
                         <TextView
@@ -99,7 +99,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="Level"
+                            android:text="@string/RecyclerTitleLevel"
                             android:textAlignment="center" />
                     </LinearLayout>
 
@@ -157,14 +157,14 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:text="NameUser"
+                        android:text="@string/nameUser"
                         android:textSize="25dp" />
 
                     <TextView
                         android:id="@+id/TimeCounter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Time: 5s"
+                        android:text="@string/TimeCounter"
                         android:textSize="25dp" />
                 </LinearLayout>
 
